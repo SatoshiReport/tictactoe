@@ -85,6 +85,11 @@ example : xCenterBlockStrategy [] initialState = some centerCoord := by
     simpa [initialState, legal, legalMoves] using hlegal'
   simp [xCenterBlockStrategy, initialState, hlegal]
 
+example :
+    playToOutcome xCenterBlockStrategy greedyAny 0 [] initialState =
+      some (boardOutcome initialState.board) := by
+  simp [playToOutcome]
+
 end Tests
 
 def main : IO Unit :=

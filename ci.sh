@@ -19,6 +19,7 @@ fi
 REMOTE="${REMOTE:-origin}"
 BRANCH="${BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
 MAX_DIFF_LINES="${MAX_DIFF_LINES:-1200}"
+CLAUDE_MODEL="${CLAUDE_MODEL:-claude-haiku-4-5-20251001}"
 
 if lake --help 2>/dev/null | grep -qE '^[[:space:]]+fmt[[:space:]]'; then
   echo "Running Lean formatter (lake fmt)..."
@@ -36,6 +37,9 @@ if lake exe --help 2>/dev/null | grep -qE '(^|[[:space:]])lint([[:space:]]|$)'; 
 elif lake exe --help 2>/dev/null | grep -qE '(^|[[:space:]])lint-style([[:space:]]|$)'; then
   echo "Running mathlib style lints (lake exe lint-style)..."
   lake exe lint-style
+elif lake exe mathlib:lint-style --help >/dev/null 2>&1; then
+  echo "Running mathlib style lints (lake exe mathlib:lint-style)..."
+  lake exe mathlib:lint-style
 else
   echo "lake exe lint unavailable; skipping lints. Add a lint executable or upgrade mathlib to enable." >&2
 fi
@@ -75,14 +79,12 @@ Write a concise git commit message for this Lean TicTacToe formalization.
 - Subject: present tense, <= 72 chars, no trailing period.
 - Body: only if essential; keep short bullets or sentences.
 - Note key Lean modules or scripts touched and testing if relevant.
+- Output format: first line is subject only. If body is needed, add a blank line then bullet lines. No preamble or commentary.
 Diff to summarize:
 EOF
 )
 
-CLAUDE_CMD=(claude -p -)
-if [[ -n "${CLAUDE_MODEL:-}" ]]; then
-  CLAUDE_CMD=(claude --model "${CLAUDE_MODEL}" -p -)
-fi
+CLAUDE_CMD=(claude --model "${CLAUDE_MODEL}" -p -)
 
 echo "Requesting commit message from Claude..."
 COMMIT_RAW="$(
@@ -92,9 +94,9 @@ COMMIT_RAW="$(
   } | "${CLAUDE_CMD[@]}"
 )"
 
-# Normalize subject/body.
-SUBJECT="$(printf "%s" "${COMMIT_RAW}" | head -n 1 | sed 's/^[[:space:]-]*//')"
-BODY="$(printf "%s" "${COMMIT_RAW}" | tail -n +2 | sed '/^[[:space:]]*$/d')"
+# Normalize subject/body. Use the first non-empty line as subject.
+SUBJECT="$(printf "%s" "${COMMIT_RAW}" | sed '/^[[:space:]]*$/d' | head -n 1 | sed 's/^[[:space:]-]*//')"
+BODY="$(printf "%s" "${COMMIT_RAW}" | sed '/^[[:space:]]*$/d' | sed '1d')"
 
 if [[ -z "${SUBJECT//[[:space:]]/}" ]]; then
   echo "Claude returned an empty commit subject; aborting." >&2

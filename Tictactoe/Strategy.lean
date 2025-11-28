@@ -34,6 +34,10 @@ noncomputable def chooseAnyLegal (b : Board) : Option Coord :=
 /-- A strategy suggests a coordinate (if any) given history and current state. -/
 abbrev Strategy := History → GameState → Option Coord
 
+/-- Play any available legal move (if one exists). -/
+noncomputable def greedyAny : Strategy :=
+  fun _ s => chooseAnyLegal s.board
+
 /-- X strategy: center first, otherwise block O's immediate win, otherwise pick any legal move. -/
 noncomputable def xCenterBlockStrategy : Strategy :=
   fun _hist s =>

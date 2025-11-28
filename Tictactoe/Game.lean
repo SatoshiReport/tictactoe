@@ -42,4 +42,16 @@ noncomputable def playN (xStrat oStrat : Strategy) : Nat → History → GameSta
     | none => none
     | some s' => playN xStrat oStrat n (s' :: hist) s'
 
+/-- Run until a terminal outcome or until the fuel `n` is exhausted. -/
+noncomputable def playToOutcome (xStrat oStrat : Strategy) :
+    Nat → History → GameState → Option Outcome
+  | Nat.zero, _, s => some (boardOutcome s.board)
+  | Nat.succ n, hist, s =>
+    match boardOutcome s.board with
+    | Outcome.ongoing =>
+        match step xStrat oStrat hist s with
+        | none => none
+        | some s' => playToOutcome xStrat oStrat n (s' :: hist) s'
+    | outcome => some outcome
+
 end Tictactoe
