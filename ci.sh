@@ -11,9 +11,37 @@ if ! command -v claude >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v lake >/dev/null 2>&1; then
+  echo "lake is required to run formatting, build, lint, and tests." >&2
+  exit 1
+fi
+
 REMOTE="${REMOTE:-origin}"
 BRANCH="${BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
 MAX_DIFF_LINES="${MAX_DIFF_LINES:-1200}"
+
+if lake --help 2>/dev/null | grep -qE '^[[:space:]]+fmt[[:space:]]'; then
+  echo "Running Lean formatter (lake fmt)..."
+  lake fmt
+else
+  echo "lake fmt unavailable; skipping formatting. Consider upgrading Lean/Lake." >&2
+fi
+
+echo "Building Lean project (lake build)..."
+lake build
+
+if lake exe --help 2>/dev/null | grep -qE '(^|[[:space:]])lint([[:space:]]|$)'; then
+  echo "Running mathlib lints (lake exe lint)..."
+  lake exe lint
+elif lake exe --help 2>/dev/null | grep -qE '(^|[[:space:]])lint-style([[:space:]]|$)'; then
+  echo "Running mathlib style lints (lake exe lint-style)..."
+  lake exe lint-style
+else
+  echo "lake exe lint unavailable; skipping lints. Add a lint executable or upgrade mathlib to enable." >&2
+fi
+
+echo "Running tests (lake test)..."
+lake test
 
 echo "Staging changes..."
 git add -A
