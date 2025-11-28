@@ -54,4 +54,32 @@ noncomputable def playToOutcome (xStrat oStrat : Strategy) :
         | some s' => playToOutcome xStrat oStrat n (s' :: hist) s'
     | outcome => some outcome
 
+/-- Fuel budget given remaining empty cells. -/
+def fuelRemaining (s : GameState) : Nat :=
+  9 - moveCount s.board
+
+/-- Convenience wrapper to play out from a state using enough fuel for a full game. -/
+noncomputable def playToOutcomeFull (xStrat oStrat : Strategy) (s : GameState) :
+    Option Outcome :=
+  playToOutcome xStrat oStrat (fuelRemaining s) [] s
+
+lemma boardOutcome_empty : boardOutcome emptyBoard = Outcome.ongoing := by
+  classical
+  unfold boardOutcome
+  have hX : ¬ wins Player.X emptyBoard := by
+    intro h
+    rcases h with ⟨line, hline, hfilled⟩
+    rcases winningLines_nonempty hline with ⟨pos, hpos⟩
+    specialize hfilled pos hpos
+    simp [emptyBoard] at hfilled
+  have hO : ¬ wins Player.O emptyBoard := by
+    intro h
+    rcases h with ⟨line, hline, hfilled⟩
+    rcases winningLines_nonempty hline with ⟨pos, hpos⟩
+    specialize hfilled pos hpos
+    simp [emptyBoard] at hfilled
+  have hcount : moveCount emptyBoard = 0 := by
+    simp [emptyBoard, moveCount, filledCells, boardCells]
+  simp [hX, hO, hcount]
+
 end Tictactoe
