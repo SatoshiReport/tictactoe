@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# Lightweight CI helper inspired by ~/ci_shared/ci_tools/scripts/ci.sh.
+# Stages all changes, asks Claude for a commit message from the staged diff, then pushes.
+set -euo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cd "${ROOT_DIR}"
+
+if ! command -v claude >/dev/null 2>&1; then
+  echo "claude CLI is required to generate the commit message." >&2
+  exit 1
+fi
+
+REMOTE="${REMOTE:-origin}"
+BRANCH="${BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
+MAX_DIFF_LINES="${MAX_DIFF_LINES:-1200}"
+
+echo "Staging changes..."
+git add -A
+
+if git diff --cached --quiet; then
+  echo "No staged changes to commit."
+  exit 0
+fi
+
+TMP_DIFF="$(mktemp)"
+TRUNCATED_DIFF=""
+trap 'rm -f "${TMP_DIFF}" "${TRUNCATED_DIFF:-}"' EXIT
+
+git diff --cached > "${TMP_DIFF}"
+DIFF_LINES="$(wc -l < "${TMP_DIFF}")"
+DIFF_FILE="${TMP_DIFF}"
+
+if [[ "${DIFF_LINES}" -gt "${MAX_DIFF_LINES}" ]]; then
+  TRUNCATED_DIFF="$(mktemp)"
+  head -n "${MAX_DIFF_LINES}" "${TMP_DIFF}" > "${TRUNCATED_DIFF}"
+  {
+    echo ""
+    echo "[diff truncated to ${MAX_DIFF_LINES} of ${DIFF_LINES} lines]"
+  } >> "${TRUNCATED_DIFF}"
+  DIFF_FILE="${TRUNCATED_DIFF}"
+  echo "Diff truncated for prompt: ${MAX_DIFF_LINES}/${DIFF_LINES} lines."
+fi
+
+PROMPT=$(cat <<'EOF'
+Write a concise git commit message for this Lean TicTacToe formalization.
+- Subject: present tense, <= 72 chars, no trailing period.
+- Body: only if essential; keep short bullets or sentences.
+- Note key Lean modules or scripts touched and testing if relevant.
+Diff to summarize:
+EOF
+)
+
+CLAUDE_CMD=(claude -p -)
+if [[ -n "${CLAUDE_MODEL:-}" ]]; then
+  CLAUDE_CMD=(claude --model "${CLAUDE_MODEL}" -p -)
+fi
+
+echo "Requesting commit message from Claude..."
+COMMIT_RAW="$(
+  {
+    printf "%s\n\n" "${PROMPT}"
+    cat "${DIFF_FILE}"
+  } | "${CLAUDE_CMD[@]}"
+)"
+
+# Normalize subject/body.
+SUBJECT="$(printf "%s" "${COMMIT_RAW}" | head -n 1 | sed 's/^[[:space:]-]*//')"
+BODY="$(printf "%s" "${COMMIT_RAW}" | tail -n +2 | sed '/^[[:space:]]*$/d')"
+
+if [[ -z "${SUBJECT//[[:space:]]/}" ]]; then
+  echo "Claude returned an empty commit subject; aborting." >&2
+  exit 1
+fi
+
+echo "Committing with message: ${SUBJECT}"
+if [[ -n "${BODY//[[:space:]]/}" ]]; then
+  git commit -m "${SUBJECT}" -m "${BODY}"
+else
+  git commit -m "${SUBJECT}"
+fi
+
+echo "Pushing to ${REMOTE}/${BRANCH}..."
+git push "${REMOTE}" "${BRANCH}"
+
+echo "Done."

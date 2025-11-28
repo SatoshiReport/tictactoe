@@ -1,30 +1,34 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Keep application code in `src/`, grouping modules by concern (e.g., `src/engine/` for game rules, `src/ui/` for any interface layer, `src/utils/` for helpers).
-- Place automated tests in `tests/` mirroring the `src/` layout (`tests/engine/test_moves.py` for `src/engine/moves.py`).
-- Store non-code assets in `assets/` (SVG/XO assets, sample board-state fixtures) and long-form notes in `docs/`.
-- Add one-off scripts in `scripts/` and prefer `Makefile` targets to wrap repeatable tasks.
+- Lean code lives in `Tictactoe/`; keep modules focused (`Rules.lean`, `Strategy.lean`, `Proofs/Draw.lean`, etc.) and expose via `Tictactoe.lean`.
+- Build configuration is in `lakefile.lean`; mathlib is the external dependency.
+- CLI entry points (if added) live in `Tictactoe/Main.lean` and wire with `lake exe`.
+- Tooling/MCP scripts are in `scripts/`; keep them Python-only with docstrings.
+- Long-form notes in `docs/`; prefer proof sketches or strategy outlines there.
 
 ## Build, Test, and Development Commands
-- Install dependencies when they are added: `pip install -r requirements.txt` (use a tool like `pipx` or your preferred environment manager if needed).
-- Run the test suite: `pytest` (add `-q` for compact output, `-k "<pattern>"` to target specific areas).
-- Lint and format before pushing: `make lint` (expected to wrap tools like `ruff` and `black`) and `make fmt` if defined; otherwise run `ruff check src tests` and `black src tests`.
-- If you add a CLI or service entry point, expose it via `python -m src.<module>` and document the usage in `README.md`.
+- `lake build` — compile all Lean modules and fetch dependencies.
+- `lake env lean Tictactoe/Main.lean` — typecheck a single file in the project environment.
+- `lake test` — run any registered Lean tests; add new tests to make this meaningful before PRs.
+- `make lint` / `make fmt` — if you add these targets, wrap `lake exe lint`/`lake exe fmt` or `leanfmt` for consistency.
+- MCP helpers: run `python scripts/novita_mcp.py` or `python scripts/stockfish_mcp.py` only after installing Python deps.
+
+## MCP Servers
+- `stockfish`: use for search/evaluation when move quality or symmetry cases matter; cite its lines in notes.
+- `solve` (Novita prover): use for proof sketches or tactic hints; keep final Lean proofs readable and minimal.
 
 ## Coding Style & Naming Conventions
-- Use 4-space indentation, type hints throughout, and explicit imports (avoid wildcard imports).
-- Name modules and files in `snake_case`; classes in `CapWords`; constants in `UPPER_SNAKE_CASE`.
-- Keep functions small; prefer pure functions in `src/engine` for move validation and win detection to simplify testing.
-- Run formatters before committing; do not hand-edit generated files.
+- Lean 4 style: two-space indentation in proofs, descriptive lemma names (`moveCount_le_nine`), explicit imports; avoid wide `open`.
+- Prefer pure definitions in `Tictactoe/` with small lemmas; keep tactics light (`simp`, `aesop`, `linarith`) and structure proofs instead of long `by` blobs.
+- Use docstrings for public defs/lemmas; favor `namespace Tictactoe` and sub-namespaces for clarity.
 
 ## Testing Guidelines
-- Write `pytest` tests named `test_*.py` with functions `test_<behavior>`. Co-locate fixtures in `conftest.py`.
-- Aim for high coverage on core rules logic (win/draw detection, blocking logic, input validation). Add regression tests for discovered bugs.
-- When adding features, provide table-driven tests where practical to cover edge cases (forks/double-threats, blocking moves, invalid sequences).
+- Add proof-style tests/lemmas near the code they exercise; for executable tests, mirror module layout under `tests/` and register with Lake so `lake test` runs them.
+- Name tests descriptively (`test_playMove_rejects_filled_cell`) and cover corner cases (occupied cells, draw detection, symmetry/fork scenarios).
+- Run `lake build` (and `lake test` if present) before pushing; avoid slowing the build with heavy proofs.
 
 ## Commit & Pull Request Guidelines
-- Use concise, present-tense commit messages (`feat: add win-check routine`, `fix: prevent overwriting occupied cell`).
-- Reference issues in the body when applicable (`Refs #123`). Squash locally if the history is noisy.
-- In pull requests, include a short summary, testing commands run, and screenshots or board-state samples if UI/output changes are involved.
-- Keep changes scoped; split large efforts into reviewable chunks and mark TODOs with a clear follow-up plan.
+- Commit messages: short present tense (`feat: add winningLines`, `fix: reject illegal move`); reference issues in the body when relevant.
+- PRs: include a brief summary, commands run (`lake build`, `lake test`), and proof sketches or strategy notes that justify the change; add screenshots only if you introduce CLI/visual output.
+- Keep changes scoped; leave TODOs with follow-up intent (`-- TODO: prove optimality of blocking strategy`).
