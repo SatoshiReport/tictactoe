@@ -91,6 +91,3 @@ example :
   simp [playToOutcome]
 
 end Tests
-
-def main : IO Unit :=
-  pure ()

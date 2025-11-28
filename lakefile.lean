@@ -8,9 +8,6 @@ package «tictactoe» where
 @[default_target]
 lean_lib «Tictactoe» where
 
-lean_exe tests where
-  root := `Tests.Main
-
 @[test_driver]
 script test do
   let result ← IO.Process.output
