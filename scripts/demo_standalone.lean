@@ -185,8 +185,12 @@ def getMoveAndExplanation (s_before : GameState) (s_after : GameState) : (Coord 
       | [] => ((⟨0, by decide⟩, ⟨0, by decide⟩), "error", "error")
       | pos :: rest =>
         if old_b pos.1 pos.2 = none && s_after.board pos.1 pos.2 = some Player.O then
-          (pos, s!"O takes ({pos.1.val},{pos.2.val}) - {positionDescription pos}",
-           "Greedy strategy: O simply plays the first available empty square without strategic foresight")
+          let desc := s!"O takes ({pos.1.val},{pos.2.val}) - {positionDescription pos}"
+          let reason :=
+            "Greedy strategy: O plays the first available empty square without evaluating board position. " ++
+            "This reactive approach lacks long-term planning, making it vulnerable to X's center-block strategy " ++
+            "which has proven optimal play built in. Against perfect X play, greedy O cannot force a win."
+          (pos, desc, reason)
         else
           findOMove rest
     findOMove boardCellsList
