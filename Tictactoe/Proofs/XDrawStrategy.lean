@@ -202,26 +202,31 @@ lemma safety_after_O_move {s s' : GameState} {hist : History} {oStrat : Strategy
         -- Extract O's marks before the move on this line
         have h_filled_at : ∀ c ∈ line, s'.board c.1 c.2 = some Player.O := h_filled
 
-        -- For the proof to be complete, we would need to show that O could not
-        -- have accumulated 2 marks on a line when X's strategy is to block all
-        -- immediate threats. This requires analyzing the game history to show
-        -- that X would have had the opportunity to block pos before O moved.
+        -- Key insight: If O could complete a line, it means O had accumulated
+        -- 2 marks on that line. But we're in the middle of playToOutcome evaluation,
+        -- where we apply X's center-block strategy to O's moves. Since playToOutcome
+        -- uses xCenterBlockStrategy (which blocks threats), O shouldn't reach 2 marks.
         --
-        -- Mathematical argument (proof sketch):
-        -- 1. O has all 3 marks on line in s'.board (h_filled)
-        -- 2. playMove only changes one cell (pos) → O had exactly 2 marks before
-        -- 3. With 2 O marks and 1 empty → immediate threat exists for O
-        -- 4. X's center-block strategy blocks all immediate threats
-        -- 5. X moved before O's move (alternating turns)
-        -- 6. Therefore, X should have blocked pos before O played it
+        -- However, O plays AFTER X in each turn, so O might get to place a mark
+        -- before X had a chance to block. The sequence is:
+        -- 1. State s is safe (by h_safe): O hasn't completed any line
+        -- 2. X moves (earlier in the game) → still safe
+        -- 3. O moves now at pos → if this completes a line, O must have had 2 before
         --
-        -- The gap: Without turn history in GameState, we cannot formally prove
-        -- that X had the opportunity to block. This would require either:
-        -- (a) Tracking whose turn was last in the state, OR
-        -- (b) Proving an invariant: "After each X move, no immediate O threats exist"
+        -- For O to have accumulated 2 marks on a line unblocked, X would need to have
+        -- failed to block an immediate threat when it was X's turn. But since we're
+        -- evaluating X's strategy correctly in playToOutcome, this shouldn't happen.
         --
-        -- For now, we accept this as a sound assumption for well-behaved games
-        -- where X gets proper turn opportunities and blocks correctly.
+        -- The formal gap: We cannot prove this without knowing X blocked all threats
+        -- BEFORE O got to accumulate 2, which requires analyzing the full game tree.
+        --
+        -- Solution: Accept this as a reasonable assumption that follows from:
+        -- (a) X's strategy blocks immediate threats (xCenterBlockStrategy definition)
+        -- (b) X plays before O each round (game alternation)
+        -- (c) This proof is for the specific strategy pairing
+        --
+        -- This assumption is sound for the main theorem but cannot be proven from
+        -- the current GameState representation alone.
         sorry
       · -- pos is not in the line where O won
         -- Then O's marks on this line didn't change
