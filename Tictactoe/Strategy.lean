@@ -62,4 +62,43 @@ def xCenterBlockStrategy : Strategy :=
     else
       none
 
+-- Strategy analysis lemmas
+
+/-- Immediate threat detection: opponent can win in one move on the given line. -/
+def isImmediateThreat (b : Board) (opponent : Player) (line : Finset Coord) : Prop :=
+  marksInLine b opponent line = 2 ∧ (emptiesInLine b line).card = 1
+
+/-- If opponent has an immediate threat on a line, blocking prevents that win. -/
+lemma blockingMove_prevents_win {b : Board} {pos : Coord} {line : Finset Coord}
+    (h_threat : isImmediateThreat b Player.O line)
+    (h_pos : pos ∈ emptiesInLine b line) :
+    ¬ wins Player.O (setCell b pos Player.X) := by
+  classical
+  unfold isImmediateThreat emptiesInLine marksInLine at h_threat
+  intro hwin
+  rcases hwin with ⟨win_line, _, hfilled⟩
+  by_cases h : line = win_line
+  · subst h
+    -- pos is empty before the move
+    have h_pos_none : b pos.1 pos.2 = none := by
+      simp [Finset.mem_filter] at h_pos
+      exact h_pos.2
+    -- After placing X at pos, all cells on the line must have O by hfilled
+    -- But pos now has X, so O can't fill all three cells
+    have contra : setCell b pos Player.X pos.1 pos.2 = some Player.O := by
+      exact hfilled pos (Finset.mem_filter.mp h_pos).1
+    simp [setCell] at contra
+  · sorry
+
+/-- Center strategy correctness: playing center on empty board is a valid opening move. -/
+lemma centerCoord_on_empty_valid : centerCoord ∈ legalMoves emptyBoard := by
+  classical
+  simp [legalMoves, emptyCells, boardCells, emptyBoard, centerCoord]
+
+/-- Finding a blocking move returns a legal move if a threat exists. -/
+lemma findBlockingMove_legal {b : Board}
+    (h : findBlockingMove b Player.O ≠ none) :
+    ∃ pos, findBlockingMove b Player.O = some pos ∧ pos ∈ legalMoves b := by
+  sorry
+
 end Tictactoe
