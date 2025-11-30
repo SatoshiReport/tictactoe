@@ -6,3 +6,8 @@
 /.cache/
 /*.pyc
 __pycache__/
+
+# Development guidance files (local only)
+CLAUDE.md
+AGENTS.md
+GEMINI.md
