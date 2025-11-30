@@ -170,4 +170,17 @@ lemma findBlockingMove_legal {b : Board}
     ∃ pos, findBlockingMove b Player.O = some pos ∧ pos ∈ legalMoves b := by
   sorry
 
+/-- O center-block strategy: symmetric to X's strategy. Play center, block X threats, then any legal move. -/
+def oCenterBlockStrategy : Strategy :=
+  fun _hist s =>
+    if s.turn = Player.O then
+      if centerCoord ∈ legalMoves s.board then
+        some centerCoord
+      else
+        match findBlockingMove s.board Player.X with
+        | some pos => some pos
+        | none => chooseAnyLegal s.board
+    else
+      none
+
 end Tictactoe

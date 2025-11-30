@@ -111,9 +111,21 @@ def xCenterBlockStrategy (s : GameState) : Option Coord :=
   else
     none
 
+def oCenterBlockStrategy (s : GameState) : Option Coord :=
+  if s.turn = Player.O then
+    let b := s.board
+    if b centerCoord.1 centerCoord.2 = none then
+      some centerCoord
+    else
+      match findBlockingMove b Player.X with
+      | some pos => some pos
+      | none => greedyAny b
+  else
+    none
+
 -- Game loop
 def step (s : GameState) : Option GameState :=
-  let strat := if s.turn = Player.X then xCenterBlockStrategy s else greedyAny s.board
+  let strat := if s.turn = Player.X then xCenterBlockStrategy s else oCenterBlockStrategy s
   match strat with
   | none => none
   | some pos => playMove s pos
@@ -185,12 +197,21 @@ def getMoveAndExplanation (s_before : GameState) (s_after : GameState) : (Coord 
       | [] => ((⟨0, by decide⟩, ⟨0, by decide⟩), "error", "error")
       | pos :: rest =>
         if old_b pos.1 pos.2 = none && s_after.board pos.1 pos.2 = some Player.O then
-          let desc := s!"O takes ({pos.1.val},{pos.2.val}) - {positionDescription pos}"
-          let reason :=
-            "Greedy strategy: O plays the first available empty square without evaluating board position. " ++
-            "This reactive approach lacks long-term planning, making it vulnerable to X's center-block strategy " ++
-            "which has proven optimal play built in. Against perfect X play, greedy O cannot force a win."
-          (pos, desc, reason)
+          if pos = centerCoord then
+            (pos, "O claims the CENTER (1,1)",
+             "Center occupancy is critical - O mirrors X's optimal strategy for equal competition in perfect play")
+          else
+            -- Check if blocking
+            let threat_lines := winningLinesList.filter fun line =>
+              (line.any fun p => old_b p.1 p.2 = some Player.X) ∧
+              (line.filter (fun p => old_b p.1 p.2 = some Player.X)).length = 2 &&
+              pos ∈ line
+            if threat_lines.length > 0 then
+              (pos, s!"O blocks at ({pos.1.val},{pos.2.val}) - {positionDescription pos}",
+               s!"X had 2 marks threatening a line. O plays defensively to prevent X's immediate win")
+            else
+              (pos, s!"O develops at ({pos.1.val},{pos.2.val}) - {positionDescription pos}",
+               "No immediate X threats. O plays to build position and create future opportunities")
         else
           findOMove rest
     findOMove boardCellsList
@@ -198,7 +219,7 @@ def getMoveAndExplanation (s_before : GameState) (s_after : GameState) : (Coord 
 def playDemo : IO Unit := do
   IO.println "╔═════════════════════════════════════════════════════════╗"
   IO.println "║          TIC-TAC-TOE WITH FORMAL PROOF                 ║"
-  IO.println "║    X (center-block strategy) vs O (greedy strategy)    ║"
+  IO.println "║  X (center-block) vs O (center-block) - PERFECT PLAY   ║"
   IO.println "║     Proven: X has a NON-LOSING STRATEGY (by theorem)   ║"
   IO.println "╚═════════════════════════════════════════════════════════╝"
   IO.println ""
