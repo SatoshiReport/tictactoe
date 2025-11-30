@@ -8,7 +8,7 @@ package «tictactoe» where
 lean_lib «Tictactoe» where
 
 lean_exe «demo» {
-  root := `scripts.demo_run
+  root := `scripts.demo_standalone
 }
 
 require mathlib from git
