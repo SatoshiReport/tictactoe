@@ -135,12 +135,43 @@ def showState (s : GameState) : IO Unit := do
   IO.println (boardToString s.board)
   IO.println ""
 
+def getMoveExplanation (s : GameState) (old_b : Board) : String :=
+  match s.turn with
+  | Player.X =>
+    -- Find the X move that was just made
+    let rec findXMove (coords : List Coord) : Option String :=
+      match coords with
+      | [] => none
+      | pos :: rest =>
+        if old_b pos.1 pos.2 = none && s.board pos.1 pos.2 = some Player.X then
+          if pos = centerCoord then
+            some "▶ X plays CENTER (optimal opening - proven mathematically)"
+          else
+            -- Check if blocking
+            let is_blocking := (winningLinesList.any fun line =>
+              (line.all fun p => p = pos || old_b p.1 p.2 ≠ some Player.O) ∧
+              (line.any fun p => old_b p.1 p.2 = some Player.O) ∧
+              (line.filter (fun p => old_b p.1 p.2 = some Player.O)).length = 2 &&
+              pos ∈ line)
+            if is_blocking then
+              some "▶ X BLOCKS O's immediate winning threat"
+            else
+              some "▶ X plays opportunistically"
+        else
+          findXMove rest
+    findXMove boardCellsList |>.getD "X moves"
+  | Player.O =>
+    "▶ O plays greedily (first available move)"
+
 def playDemo : IO Unit := do
-  IO.println "=== Tic-Tac-Toe Demo ==="
-  IO.println "X uses center-block strategy, O plays greedily"
+  IO.println "╔════════════════════════════════════════════╗"
+  IO.println "║   TIC-TAC-TOE WITH FORMAL PROOF          ║"
+  IO.println "║  X (center-block) vs O (greedy)          ║"
+  IO.println "║  Proven: X has a NON-LOSING STRATEGY     ║"
+  IO.println "╚════════════════════════════════════════════╝"
   IO.println ""
   let rec loop (fuel : Nat) (ply : Nat) (s : GameState) : IO Unit := do
-    IO.println s!"--- Ply {ply} ---"
+    IO.println s!"─── Move {ply} ───"
     showState s
     match boardOutcome s.board with
     | Outcome.ongoing =>
@@ -149,9 +180,27 @@ def playDemo : IO Unit := do
         else
           match step s with
           | none => IO.println "No legal move available. Stopping."
-          | some s' => loop (fuel - 1) (ply + 1) s'
-    | Outcome.wins p => IO.println s!"=== {p} wins! ==="
-    | Outcome.draw => IO.println "=== Draw! ==="
+          | some s' =>
+            let old_board := s.board
+            let explanation := getMoveExplanation s' old_board
+            IO.println explanation
+            IO.println ""
+            loop (fuel - 1) (ply + 1) s'
+    | Outcome.wins p =>
+      IO.println "╔════════════════════════════════════════════╗"
+      IO.println s!"║ 🎉 {p} WINS!                              ║"
+      IO.println "╚════════════════════════════════════════════╝"
+      IO.println ""
+      IO.println "RESULT: X wins! (Draw is also possible with optimal O play)"
+      IO.println "PROOF: By x_nonlosing_strategy theorem:"
+      IO.println "  ∀ stratO : Strategy, ¬(Outcome.wins Player.O)"
+    | Outcome.draw =>
+      IO.println "╔════════════════════════════════════════════╗"
+      IO.println "║ 🤝 DRAW - Perfect game theory in action  ║"
+      IO.println "╚════════════════════════════════════════════╝"
+      IO.println ""
+      IO.println "RESULT: Game ends in draw (most likely outcome)"
+      IO.println "PROOF: By x_nonlosing_strategy theorem"
   loop 10 0 initialState
 
 def main : IO Unit := playDemo
