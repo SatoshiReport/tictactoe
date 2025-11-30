@@ -531,8 +531,8 @@ The Lean Community. (2024). "Lean 4 Documentation." https://lean-lang.org/
 
 ---
 
-**Author:** Formalized with Claude Code and Lean 4
-**Repository:** https://github.com/[username]/tictactoe
+**Author:** SatoshiReport
+**Repository:** https://github.com/satoshireport/tictactoe
 **License:** MIT
 **Last Updated:** November 30, 2024
 

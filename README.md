@@ -9,7 +9,7 @@ A formally verified proof that tic-tac-toe is a draw with perfect play, implemen
 lake build
 
 # Run the perfect-play demo (X vs O, both using optimal strategies)
-lake build demo && lake env ./.lake/build/bin/demo
+lake build demo && .lake/build/bin/demo
 
 # Run tests
 lake test
@@ -319,10 +319,7 @@ lean Tictactoe/Proofs/XDrawStrategy.lean
 lake test
 
 # Build and run demo
-lake build demo && lake env ./.lake/build/bin/demo
-
-# Just the executable (after build)
-./.lake/build/bin/demo
+lake build demo && .lake/build/bin/demo
 ```
 
 ### Verification
