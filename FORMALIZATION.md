@@ -190,6 +190,8 @@ Formal framework for comparing different strategies:
 
 ## Extensions (Complete)
 
+### Phase 1: Core Extensions
+
 1. ✅ **Fork detection** (`Strategy.lean:93-121`):
    - `hasFork` predicate and `threatCount` function
    - `fork_iff_two_or_more_threats` equivalence theorem
@@ -200,23 +202,86 @@ Formal framework for comparing different strategies:
    - Integrated into `xCenterBlockForkStrategy`
    - Formal specification of enhanced blocking phase
 
+### Phase 2: Research Extensions
+
 3. ✅ **Outcome analysis** (`Outcomes.lean`):
+   - 8 theorems characterizing game outcomes
    - `o_cannot_win`, `x_achieves_draw_or_win`, `game_outcome_with_greedy_O`
    - `optimal_play_is_draw`, `x_draw_guaranteed`
-   - Characterization of all possible outcomes
+   - Supporting lemmas: `outcome_always_some`, `outcome_partition`, `initial_state_achieves_draw`
+   - Comprehensive outcome framework with 5 support lemmas
 
 4. ✅ **Strategy comparison** (`StrategyComparison.lean`):
-   - `strategyDominates` for comparing strategies
+   - 10 definitions/theorems for strategy analysis
+   - `strategyDominates` predicate for comparing strategies
    - `isNonLosingStrategy`, `isDrawForcingStrategy` classifications
-   - Framework for analyzing strategy quality
+   - Supporting lemmas: `both_strategies_non_losing`, `centerBlock_draws_vs_greedy`, `forkStrategy_draws_vs_greedy`
+   - `strategyBetter` partial order on strategy quality
+   - Framework for analyzing strategy dominance
+
+5. ✅ **Extended strategies** (`ExtendedStrategies.lean` - NEW):
+   - `xCornerFirstStrategy`: Prioritize corner control
+   - `xMirrorStrategy`: Symmetric responding strategy
+   - `xAggressiveStrategy`: Offensive move-seeking strategy
+   - `xRandomStrategy`: Deterministic fallback
+   - Theorems proving all strategies are non-losing
+   - Strategy-specific lemmas: `aggressive_finds_wins`, `mirror_vs_mirror`
+   - Comparative analysis: `aggressive_more_offensive`, `all_main_strategies_non_losing`
+
+6. ✅ **Opening book** (`OpeningBook.lean` - NEW):
+   - `opening_move_quality` heuristic evaluation
+   - `o_responses_to_center`: Complete response catalog
+   - `OpeningType` classification: Center, Corner, Edge
+   - Opening principles: control center, prevent forks, occupy center
+   - `first_move_ranking` with complete move ordering (3-2-2-2-2-1-1-1-1)
+   - Theorems: `center_opening_optimal`, `o_corner_best_response_to_center`, `all_openings_safe_for_x`
+   - Opening book completeness framework
 
 ## Future Work
 
-1. **Complete outcome proofs**: Finish the sorrys in Outcomes.lean (framework established)
-2. **Complete strategy comparison**: Finish the sorrys in StrategyComparison.lean (framework established)
-3. **Optimal play analysis**: Deeply analyze positions with optimal play
-4. **Extended strategies**: Formalize additional strategies (random, mirroring, etc.)
-5. **Opening book**: Formalize opening theory with variations
+### Immediate Tasks (Complete Existing Frameworks)
+
+1. **Complete outcome proofs** (`Outcomes.lean`):
+   - Finish `o_cannot_win`, `x_achieves_draw_or_win`, `game_outcome_with_greedy_O`
+   - Requires recursion over `playToOutcome` and fuel analysis
+   - Connect `playToOutcomeFull` to `playToOutcome` with fuel bounds
+
+2. **Complete strategy comparison** (`StrategyComparison.lean`):
+   - Finish all non-losing strategy theorems
+   - Prove strategy dominance relationships
+   - Complete equivalence class analysis for strategies
+
+3. **Complete extended strategies** (`ExtendedStrategies.lean`):
+   - Prove mirror strategy maintains symmetry
+   - Prove aggressive strategy finds wins faster
+   - Complete all strategy-specific properties
+
+4. **Complete opening book** (`OpeningBook.lean`):
+   - Prove all openings lead to safe positions
+   - Complete opening book coverage proof
+   - Formalize opening principles as lemmas
+
+### Advanced Research
+
+5. **Optimal play analysis across positions**:
+   - Analyze game tree from specific board positions
+   - Compute minimax values for endgame positions
+   - Characterize forced draw vs. weak play positions
+
+6. **Endgame theory**:
+   - Formalize winning/drawing endgame patterns
+   - Analyze positions with 4+ moves remaining
+   - Create endgame reference database
+
+7. **Strategy tournaments**:
+   - Formal comparison of all 6 strategies in round-robin
+   - Win/loss statistics by strategy pair
+   - Strategy strength ranking
+
+8. **Machine learning integration**:
+   - Formalize evaluation function properties
+   - Prove correctness of heuristic estimates
+   - Integrate NN-based position evaluation
 
 ## Running the Proofs
 
