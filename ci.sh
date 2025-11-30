@@ -74,7 +74,7 @@ Write a concise git commit message for this Lean TicTacToe formalization.
 - Subject: present tense, <= 72 chars, no trailing period.
 - Body: only if essential; keep short bullets or sentences.
 - Note key Lean modules or scripts touched and testing if relevant.
-- Output format: first line is subject only. If body is needed, add a blank line then bullet lines. No preamble or commentary.
+- Output format: first line is subject only. If body is needed, add a blank line then bullet lines. Do NOT wrap in markdown code blocks. No preamble.
 Diff to summarize:
 EOF
 )
@@ -89,12 +89,33 @@ COMMIT_RAW="$(
   } | "${CLAUDE_CMD[@]}"
 )"
 
-# Normalize subject/body. Use the first non-empty line as subject.
-SUBJECT="$(printf "%s" "${COMMIT_RAW}" | sed '/^[[:space:]]*$/d' | head -n 1 | sed 's/^[[:space:]-]*//')"
-BODY="$(printf "%s" "${COMMIT_RAW}" | sed '/^[[:space:]]*$/d' | sed '1d')"
+# Clean up the response: strip markdown code fences and isolate subject/body.
+SUBJECT=""
+BODY=""
+# We loop through the raw output line by line.
+while IFS= read -r line; do
+  # Remove trailing CR if present
+  line="${line%$'\r'}"
+  # Skip markdown code block fences
+  if [[ "$line" =~ ^\`\`\` ]]; then continue; fi
+  
+  # If we haven't found a subject yet...
+  if [[ -z "$SUBJECT" ]]; then
+    # Skip empty lines looking for the subject
+    if [[ -z "${line//[[:space:]]/}" ]]; then continue; fi
+    # Found the subject (trim leading whitespace)
+    SUBJECT="$(echo "$line" | sed 's/^[[:space:]]*//')"
+  else
+    # We already have a subject, so this is part of the body.
+    BODY+="$line"$'\n'
+  fi
+done <<< "$COMMIT_RAW"
+
+# Trim the trailing newline from the accumulated body
+BODY="${BODY%$'\n'}"
 
 if [[ -z "${SUBJECT//[[:space:]]/}" ]]; then
-  echo "Claude returned an empty commit subject; aborting." >&2
+  echo "Claude returned an empty/invalid commit subject (Raw: ${COMMIT_RAW}); aborting." >&2
   exit 1
 fi
 

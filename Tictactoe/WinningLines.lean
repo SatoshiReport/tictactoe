@@ -26,20 +26,28 @@ def cols : Finset (Finset Coord) :=
 def diagonals : Finset (Finset Coord) :=
   ([mainDiag, antiDiag] : List (Finset Coord)).toFinset
 
+def rowList : List (Finset Coord) := (List.finRange 3).map row
+def colList : List (Finset Coord) := (List.finRange 3).map col
+def diagList : List (Finset Coord) := [mainDiag, antiDiag]
+def winningLinesList : List (Finset Coord) := rowList ++ colList ++ diagList
+
 /-- The eight winning lines: three rows, three columns, two diagonals. -/
 def winningLines : Finset (Finset Coord) :=
-  rows ∪ cols ∪ diagonals
+  winningLinesList.toFinset
 
 /-- Player `p` wins on board `b` if some winning line is filled with `p`. -/
 def wins (p : Player) (b : Board) : Prop :=
   ∃ line ∈ winningLines, ∀ pos ∈ line, b pos.1 pos.2 = some p
+
+instance (p : Player) (b : Board) : Decidable (wins p b) :=
+  decidable_of_decidable_of_iff (by unfold wins; exact Iff.rfl)
 
 /-- If every main-diagonal cell is marked by `p`, then `p` wins. -/
 lemma wins_mainDiag {b : Board} {p : Player}
     (h : ∀ i, b i i = some p) : wins p b := by
   classical
   refine ⟨mainDiag, ?_, ?_⟩
-  · simp [winningLines, diagonals]
+  · simp [winningLines, winningLinesList, diagList]
   · intro pos hpos
     rcases Finset.mem_image.mp hpos with ⟨i, _, rfl⟩
     simp [h]
@@ -67,14 +75,21 @@ lemma antiDiag_nonempty : antiDiag.Nonempty := by
 lemma winningLines_nonempty {line : Finset Coord} (h : line ∈ winningLines) :
     line.Nonempty := by
   classical
+  rw [winningLines, winningLinesList, List.toFinset_append, List.toFinset_append] at h
   rcases Finset.mem_union.mp h with hrc | hdiag
   · rcases Finset.mem_union.mp hrc with hrow | hcol
-    · rcases Finset.mem_image.mp hrow with ⟨i, _, rfl⟩
+    · have : line ∈ rows := by
+        simpa [rows, rowList] using hrow
+      rcases Finset.mem_image.mp this with ⟨i, _, rfl⟩
       exact row_nonempty _
-    · rcases Finset.mem_image.mp hcol with ⟨j, _, rfl⟩
+    · have : line ∈ cols := by
+        simpa [cols, colList] using hcol
+      rcases Finset.mem_image.mp this with ⟨j, _, rfl⟩
       exact col_nonempty _
-  · have hdiag' : line = mainDiag ∨ line = antiDiag := by
-      simpa [diagonals] using hdiag
+  · have : line ∈ diagonals := by
+        simpa [diagonals, diagList] using hdiag
+    have hdiag' : line = mainDiag ∨ line = antiDiag := by
+      simpa [diagonals] using this
     rcases hdiag' with rfl | rfl
     · exact mainDiag_nonempty
     · exact antiDiag_nonempty

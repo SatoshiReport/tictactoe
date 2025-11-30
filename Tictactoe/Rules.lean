@@ -21,6 +21,9 @@ abbrev Board := Fin 3 → Fin 3 → Cell
 def boardCells : Finset Coord :=
   Finset.univ.product Finset.univ
 
+def boardCellsList : List Coord :=
+  (List.finRange 3).flatMap (fun i => (List.finRange 3).map (fun j => (i, j)))
+
 /-- The subset of coordinates that are already filled. -/
 def filledCells (b : Board) : Finset Coord :=
   boardCells.filter (fun pos => b pos.1 pos.2 ≠ none)
@@ -78,6 +81,9 @@ def emptyCells (b : Board) : Finset Coord :=
 
 abbrev legalMoves := emptyCells
 
+def legalMovesList (b : Board) : List Coord :=
+  boardCellsList.filter (fun pos => b pos.1 pos.2 = none)
+
 lemma emptyCells_card_le_nine (b : Board) : (emptyCells b).card ≤ 9 := by
   classical
   have h := Finset.card_filter_le
@@ -100,6 +106,9 @@ def playMove (s : GameState) (pos : Coord) : Option GameState :=
 /-- A move is legal when the target cell is empty. -/
 def legal (s : GameState) (pos : Coord) : Prop :=
   pos ∈ legalMoves s.board
+
+instance (s : GameState) (pos : Coord) : Decidable (legal s pos) :=
+  Finset.decidableMem pos (legalMoves s.board)
 
 lemma legal_iff_empty {s : GameState} {pos : Coord} :
     legal s pos ↔ s.board pos.1 pos.2 = none := by

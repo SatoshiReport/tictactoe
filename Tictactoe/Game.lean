@@ -2,8 +2,6 @@ import Tictactoe.Strategy
 
 namespace Tictactoe
 
-open Classical
-
 /-- Terminal game outcomes. -/
 inductive Outcome
   | wins (p : Player)
@@ -12,7 +10,7 @@ inductive Outcome
   deriving Repr, DecidableEq
 
 /-- Classify a board without looking at future moves. -/
-noncomputable def boardOutcome (b : Board) : Outcome :=
+def boardOutcome (b : Board) : Outcome :=
   if wins Player.X b then
     Outcome.wins Player.X
   else if wins Player.O b then
@@ -23,19 +21,19 @@ noncomputable def boardOutcome (b : Board) : Outcome :=
     Outcome.ongoing
 
 /-- Apply the current player's strategy for one turn, if it produces a legal move. -/
-noncomputable def step (xStrat oStrat : Strategy) (hist : History) (s : GameState) :
+def step (xStrat oStrat : Strategy) (hist : History) (s : GameState) :
     Option GameState :=
   let strat := if s.turn = Player.X then xStrat else oStrat
   match strat hist s with
   | none => none
   | some pos =>
-    if _ : legal s pos then
+    if legal s pos then
       playMove s pos
     else
       none
 
 /-- Run at most `n` turns, threading history as most-recent-first. -/
-noncomputable def playN (xStrat oStrat : Strategy) : Nat → History → GameState → Option GameState
+def playN (xStrat oStrat : Strategy) : Nat → History → GameState → Option GameState
   | Nat.zero, _, s => some s
   | Nat.succ n, hist, s =>
     match step xStrat oStrat hist s with
@@ -43,7 +41,7 @@ noncomputable def playN (xStrat oStrat : Strategy) : Nat → History → GameSta
     | some s' => playN xStrat oStrat n (s' :: hist) s'
 
 /-- Run until a terminal outcome or until the fuel `n` is exhausted. -/
-noncomputable def playToOutcome (xStrat oStrat : Strategy) :
+def playToOutcome (xStrat oStrat : Strategy) :
     Nat → History → GameState → Option Outcome
   | Nat.zero, _, s => some (boardOutcome s.board)
   | Nat.succ n, hist, s =>
@@ -59,7 +57,7 @@ def fuelRemaining (s : GameState) : Nat :=
   9 - moveCount s.board
 
 /-- Convenience wrapper to play out from a state using enough fuel for a full game. -/
-noncomputable def playToOutcomeFull (xStrat oStrat : Strategy) (s : GameState) :
+def playToOutcomeFull (xStrat oStrat : Strategy) (s : GameState) :
     Option Outcome :=
   playToOutcome xStrat oStrat (fuelRemaining s) [] s
 
