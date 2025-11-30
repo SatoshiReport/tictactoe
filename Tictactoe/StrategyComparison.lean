@@ -72,4 +72,67 @@ theorem forkAwareAtLeastAsGood :
   intro oStrat s
   sorry
 
+/-- Both center-block strategies are non-losing against any opponent. -/
+lemma both_strategies_non_losing :
+    isNonLosingStrategy xCenterBlockStrategy ∧
+    isNonLosingStrategy xCenterBlockForkStrategy := by
+  constructor
+  · exact centerBlockIsNonLosing
+  · exact centerBlockForkIsNonLosing
+
+/-- Center-block strategy guarantees draw-or-better against greedy. -/
+lemma centerBlock_draws_vs_greedy :
+    ∀ s : GameState,
+      strategyOutcome xCenterBlockStrategy greedyAny s = some Outcome.draw ∨
+      strategyOutcome xCenterBlockStrategy greedyAny s = some (Outcome.wins Player.X) := by
+  intro s
+  unfold strategyOutcome
+  sorry -- Follows from main non-losing theorem
+
+/-- Fork-aware strategy draws-or-better against greedy. -/
+lemma forkStrategy_draws_vs_greedy :
+    ∀ s : GameState,
+      strategyOutcome xCenterBlockForkStrategy greedyAny s = some Outcome.draw ∨
+      strategyOutcome xCenterBlockForkStrategy greedyAny s = some (Outcome.wins Player.X) := by
+  intro s
+  unfold strategyOutcome
+  sorry -- Enhanced strategy should draw-or-better
+
+/-- Comparing two strategies on a position with equality. -/
+lemma strategies_equal_when_no_fork {s : GameState} (h : ¬ hasFork s.board Player.O) :
+    strategyOutcome xCenterBlockStrategy greedyAny s =
+    strategyOutcome xCenterBlockForkStrategy greedyAny s := by
+  -- When no fork exists, fork-aware strategy reduces to basic strategy
+  sorry
+
+/-- Strategy quality partially ordered by outcomes. -/
+def strategyBetter (xStrat1 xStrat2 : Strategy) : Prop :=
+  ∀ (oStrat : Strategy) (s : GameState),
+    (strategyOutcome xStrat1 oStrat s = some (Outcome.wins Player.X) →
+     (strategyOutcome xStrat2 oStrat s = some (Outcome.wins Player.X) ∨
+      strategyOutcome xStrat2 oStrat s = some Outcome.draw)) ∧
+    (strategyOutcome xStrat2 oStrat s = some (Outcome.wins Player.O) →
+     strategyOutcome xStrat1 oStrat s = some (Outcome.wins Player.O))
+
+/-- Fork-aware strategy is better than center-block in some positions. -/
+lemma fork_strategy_sometimes_better :
+    ∃ (s : GameState),
+      hasFork s.board Player.O ∧
+      (strategyOutcome xCenterBlockForkStrategy greedyAny s = some (Outcome.wins Player.X) →
+       strategyOutcome xCenterBlockStrategy greedyAny s ≠ some (Outcome.wins Player.X)) := by
+  sorry
+
+/-- All non-losing strategies form an equivalence class against greedy O. -/
+lemma non_losing_strategies_equivalent :
+    ∀ (xStrat : Strategy),
+      isNonLosingStrategy xStrat →
+      isNonLosingStrategy xCenterBlockStrategy →
+      (∀ s : GameState,
+        (strategyOutcome xStrat greedyAny s = some Outcome.draw →
+         strategyOutcome xCenterBlockStrategy greedyAny s = some Outcome.draw ∨
+         strategyOutcome xCenterBlockStrategy greedyAny s = some (Outcome.wins Player.X))) := by
+  intro xStrat _ _
+  intro s h_draw
+  sorry
+
 end Tictactoe
