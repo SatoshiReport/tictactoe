@@ -46,3 +46,16 @@ The approach proves safety invariants showing O cannot force a win against X's s
 
 - Lean 4 (v4.26.0-rc2)
 - Mathlib4 (from master)
+
+## Known Issues
+
+### Runtime Panic with `open Tictactoe`
+
+The formalization includes extensive use of `classical` logic tactics in proofs (especially in WinningLines.lean and Rules.lean). When these proofs are imported at runtime and the Tictactoe namespace is opened, Lean 4's IR code generation fails with "INTERNAL PANIC: unreachable code has been reached".
+
+**Workaround**: Do not use `open Tictactoe` in executable code. Instead:
+- Use fully qualified names (e.g., `Tictactoe.Player.X` instead of `Player.X`)
+- Import the modules as needed
+- Keep the executable entry point minimal
+
+This allows `lake build demo` to work correctly while avoiding the runtime panic.
