@@ -11,5 +11,10 @@ lean_exe «demo» {
   root := `scripts.demo_standalone
 }
 
+@[test_driver]
+lean_exe «test» {
+  root := `Test.Basic
+}
+
 require mathlib from git
   "https://github.com/leanprover-community/mathlib4" @ "master"

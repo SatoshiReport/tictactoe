@@ -6,6 +6,9 @@
 # Build and verify all proofs
 lake build
 
+# Run tests
+lake test
+
 # Build and run the demo executable
 lake build demo && lake env ./.lake/build/bin/demo
 ```

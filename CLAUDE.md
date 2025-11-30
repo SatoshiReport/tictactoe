@@ -12,6 +12,12 @@ This is a Lean 4 project formalizing tic-tac-toe with the goal of proving that w
 # Build the project
 lake build
 
+# Run tests
+lake test
+
+# Build and run demo executable
+lake build demo && lake env ./.lake/build/bin/demo
+
 # Update dependencies (mathlib)
 lake update
 
@@ -49,13 +55,13 @@ The approach proves safety invariants showing O cannot force a win against X's s
 
 ## Known Issues
 
-### Runtime Panic with `open Tictactoe`
+### Classical Logic and Native Compilation
 
-The formalization includes extensive use of `classical` logic tactics in proofs (especially in WinningLines.lean and Rules.lean). When these proofs are imported at runtime and the Tictactoe namespace is opened, Lean 4's IR code generation fails with "INTERNAL PANIC: unreachable code has been reached".
+The formalization uses `classical` logic tactics extensively in proofs (especially in WinningLines.lean and Rules.lean). Lean 4's IR code generator cannot compile these to native code, causing "INTERNAL PANIC: unreachable code has been reached" at runtime.
 
-**Workaround**: Do not use `open Tictactoe` in executable code. Instead:
-- Use fully qualified names (e.g., `Tictactoe.Player.X` instead of `Player.X`)
-- Import the modules as needed
-- Keep the executable entry point minimal
+**Solution**: The demo executable (`scripts/demo_standalone.lean`) is a self-contained implementation that does not import the formalization. This allows native compilation while the formalization proofs remain available for verification via `lake build`.
 
-This allows `lake build demo` to work correctly while avoiding the runtime panic.
+The formalization can still be run as an interpreted script if needed:
+```bash
+lake env lean --run scripts/some_script.lean
+```
