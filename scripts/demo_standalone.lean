@@ -135,6 +135,19 @@ def showState (s : GameState) : IO Unit := do
   IO.println (boardToString s.board)
   IO.println ""
 
+def positionDescription (pos : Coord) : String :=
+  let row := pos.1.val
+  let col := pos.2.val
+  let rowName := match row with
+    | 0 => "top"
+    | 1 => "middle"
+    | _ => "bottom"
+  let colName := match col with
+    | 0 => "left"
+    | 1 => "center"
+    | _ => "right"
+  s!"{rowName} {colName}"
+
 def getMoveAndExplanation (s_before : GameState) (s_after : GameState) : (Coord × String × String) :=
   -- s_before.turn is the player who just moved
   -- s_after.turn is the other player (turn has flipped)
@@ -148,17 +161,20 @@ def getMoveAndExplanation (s_before : GameState) (s_after : GameState) : (Coord 
       | pos :: rest =>
         if old_b pos.1 pos.2 = none && s_after.board pos.1 pos.2 = some Player.X then
           if pos = centerCoord then
-            (pos, "X plays CENTER", "Optimal opening move - controls the most lines (proven)")
+            (pos, "X claims the CENTER (1,1)",
+             "Center occupancy is the strongest opening - controls 4 lines (horizontal, vertical, both diagonals)")
           else
             -- Check if blocking
-            let is_blocking := (winningLinesList.any fun line =>
+            let threat_lines := winningLinesList.filter fun line =>
               (line.any fun p => old_b p.1 p.2 = some Player.O) ∧
               (line.filter (fun p => old_b p.1 p.2 = some Player.O)).length = 2 &&
-              pos ∈ line)
-            if is_blocking then
-              (pos, "X BLOCKS threat", "O had 2 marks on a line - X blocks the winning move")
+              pos ∈ line
+            if threat_lines.length > 0 then
+              (pos, s!"X blocks at ({pos.1.val},{pos.2.val}) - {positionDescription pos}",
+               s!"O had 2 marks threatening a line and 1 empty space. X plays the only legal block to prevent immediate loss")
             else
-              (pos, "X plays here", "No immediate threats - play strategically")
+              (pos, s!"X develops at ({pos.1.val},{pos.2.val}) - {positionDescription pos}",
+               "No immediate O threats. X plays to build position and create future winning opportunities")
         else
           findXMove rest
     findXMove boardCellsList
@@ -169,7 +185,8 @@ def getMoveAndExplanation (s_before : GameState) (s_after : GameState) : (Coord 
       | [] => ((⟨0, by decide⟩, ⟨0, by decide⟩), "error", "error")
       | pos :: rest =>
         if old_b pos.1 pos.2 = none && s_after.board pos.1 pos.2 = some Player.O then
-          (pos, "O plays here", "First available move (greedy strategy)")
+          (pos, s!"O takes ({pos.1.val},{pos.2.val}) - {positionDescription pos}",
+           "Greedy strategy: O simply plays the first available empty square without strategic foresight")
         else
           findOMove rest
     findOMove boardCellsList
