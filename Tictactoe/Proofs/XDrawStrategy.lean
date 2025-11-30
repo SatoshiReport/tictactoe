@@ -190,44 +190,108 @@ lemma safety_after_O_move {s s' : GameState} {hist : History} {oStrat : Strategy
       -- Check if pos is in the line
       by_cases h_in_line : pos ∈ line
       · -- pos is in the line where O won
-        -- This case represents: O completed a winning line by placing at pos
-        -- From h_safe: O did not have a full line before this move
-        -- From h_filled: All three cells in line are O in s'.board
-        -- From h_in_line: pos is one of those three cells
+        -- O just completed the winning line at pos:
+        -- All 3 cells in line are O in s'.board (h_filled)
 
-        -- Key insight: If O just placed O at pos and now all 3 cells have O,
-        -- then before the move O had exactly 2 marks on this line.
-        -- With 2 O marks and 1 empty, this forms an isImmediateThreat.
+        have h_all_o_after : ∀ c ∈ line, s'.board c.1 c.2 = some Player.O := h_filled
 
-        -- Extract O's marks before the move on this line
-        have h_filled_at : ∀ c ∈ line, s'.board c.1 c.2 = some Player.O := h_filled
+        -- Since pos was empty and is now O, other 2 cells were already O
+        have h_other_two_o : ∀ c ∈ line \ {pos}, s.board c.1 c.2 = some Player.O := by
+          intro c hc
+          simp [Finset.mem_sdiff, Finset.mem_singleton] at hc
+          have := h_all_o_after c (Finset.mem_of_mem_sdiff hc)
+          simp [setCell, hc.2] at this
+          exact this
 
-        -- Key insight: If O could complete a line, it means O had accumulated
-        -- 2 marks on that line. But we're in the middle of playToOutcome evaluation,
-        -- where we apply X's center-block strategy to O's moves. Since playToOutcome
-        -- uses xCenterBlockStrategy (which blocks threats), O shouldn't reach 2 marks.
-        --
-        -- However, O plays AFTER X in each turn, so O might get to place a mark
-        -- before X had a chance to block. The sequence is:
-        -- 1. State s is safe (by h_safe): O hasn't completed any line
-        -- 2. X moves (earlier in the game) → still safe
-        -- 3. O moves now at pos → if this completes a line, O must have had 2 before
-        --
-        -- For O to have accumulated 2 marks on a line unblocked, X would need to have
-        -- failed to block an immediate threat when it was X's turn. But since we're
-        -- evaluating X's strategy correctly in playToOutcome, this shouldn't happen.
-        --
-        -- The formal gap: We cannot prove this without knowing X blocked all threats
-        -- BEFORE O got to accumulate 2, which requires analyzing the full game tree.
-        --
-        -- Solution: Accept this as a reasonable assumption that follows from:
-        -- (a) X's strategy blocks immediate threats (xCenterBlockStrategy definition)
-        -- (b) X plays before O each round (game alternation)
-        -- (c) This proof is for the specific strategy pairing
-        --
-        -- This assumption is sound for the main theorem but cannot be proven from
-        -- the current GameState representation alone.
-        sorry
+        -- pos was empty in s.board
+        have h_pos_empty : s.board pos.1 pos.2 = none := by
+          exact (legal_iff_empty).mp (playMove_some_implies_legal h_step)
+
+        -- So O had exactly 2 marks + 1 empty (immediate threat)
+        -- Winning lines have exactly 3 cells
+        have h_line_card : line.card = 3 := winningLines_size h_line
+
+        -- line \ {pos} has 2 cells
+        have h_non_pos_card : (line \ {pos}).card = 2 :=
+          three_minus_one_eq_two h_line_card h_in_line
+
+        -- O's marks on line equals non-pos cells that are O
+        have h_marks_count : (line.filter (fun p => s.board p.1 p.2 = some Player.O)).card ≥ 2 := by
+          have : (line.filter (fun p => s.board p.1 p.2 = some Player.O)) ⊇ line \ {pos} := by
+            intro p hp
+            simp [Finset.mem_filter, Finset.mem_sdiff, Finset.mem_singleton]
+            exact ⟨Finset.mem_of_mem_sdiff hp, h_other_two_o p hp⟩
+          have := Finset.card_le_card this
+          rw [h_non_pos_card] at this
+          exact by omega
+
+        -- But s.board is safe
+        have h_safe_board : ¬ wins Player.O s.board := h_safe
+
+        -- Now derive contradiction: if O had ≥ 2 marks and one empty (pos),
+        -- and line has 3 cells, then either:
+        -- Case 1: Exactly 2 marks + 1 empty = immediate threat (contradicts no_immediate_threats)
+        -- Case 2: ≥ 3 marks = all O = O won before (contradicts h_safe)
+
+        exfalso
+        by_cases h_exactly_two : (line.filter (fun p => s.board p.1 p.2 = some Player.O)).card = 2
+        · -- Exactly 2 marks: with pos empty, this is immediate threat
+          have h_pos_empty_in_line : pos ∈ emptiesInLine s.board line := by
+            unfold emptiesInLine
+            simp [Finset.mem_filter, h_pos_empty, h_in_line]
+          have h_threat : isImmediateThreat s.board Player.O line := by
+            unfold isImmediateThreat marksInLine emptiesInLine
+            constructor
+            · exact h_exactly_two
+            · -- Exactly 1 empty cell: pos
+              have h_non_pos_not_empty : ∀ c ∈ line \ {pos}, s.board c.1 c.2 ≠ none := by
+                intro c hc
+                have := h_other_two_o c hc
+                simp [this]
+              have : (line.filter (fun p => s.board p.1 p.2 = none)) = {pos} := by
+                ext p
+                simp [Finset.mem_filter, Finset.mem_singleton]
+                constructor
+                · intro ⟨hmem, hempty⟩
+                  by_cases h : p = pos
+                  · exact h
+                  · exfalso
+                    have : p ∈ line \ {pos} := by
+                      simp [Finset.mem_sdiff, Finset.mem_singleton, hmem, h]
+                    exact (h_non_pos_not_empty p this) hempty
+                · intro heq
+                  subst heq
+                  simp [h_pos_empty, h_in_line]
+              simp [this]
+          -- But s.board is safe, so no immediate threats
+          exact (no_immediate_O_threats_after_X_move h_pos_empty h_move h_safe_board) line h_line h_threat
+        · -- Not exactly 2 marks, but ≥ 2, so ≥ 3
+          push_neg at h_exactly_two
+          have h_three_or_more : (line.filter (fun p => s.board p.1 p.2 = some Player.O)).card ≥ 3 := by
+            omega
+          -- On a 3-cell line, ≥ 3 O marks means all 3 are O
+          have h_all_O : ∀ c ∈ line, s.board c.1 c.2 = some Player.O := by
+            intro c hc
+            by_contra h_neg
+            have : c ∉ line.filter (fun p => s.board p.1 p.2 = some Player.O) := by
+              simp [Finset.mem_filter, h_neg]
+            have h_not_marked : c ∉ (line.filter (fun p => s.board p.1 p.2 = some Player.O)) := this
+            have h_card_lt : (line.filter (fun p => s.board p.1 p.2 = some Player.O)).card < line.card := by
+              classical
+              have h_strict_subset : line.filter (fun p => s.board p.1 p.2 = some Player.O) ⊂ line := by
+                rw [Finset.ssubset_iff_subset_ne]
+                constructor
+                · exact Finset.filter_subset _ _
+                · intro h_eq
+                  have : c ∈ line.filter (fun p => s.board p.1 p.2 = some Player.O) := by
+                    rw [h_eq]
+                    exact hc
+                  simp [Finset.mem_filter] at this
+                  exact h_neg this.2
+              exact Finset.card_lt_card h_strict_subset
+            omega
+          -- Therefore O won on s.board
+          exact h_safe_board ⟨line, h_line, h_all_O⟩
       · -- pos is not in the line where O won
         -- Then O's marks on this line didn't change
         -- Before: O didn't fill the line (by safety_invariant)

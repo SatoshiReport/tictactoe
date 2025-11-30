@@ -60,10 +60,11 @@ def otherPlayer : Player → Player
   | Player.X => Player.O
   | Player.O => Player.X
 
-/-- A game state is a board with a turn indicator. -/
+/-- A game state is a board with a turn indicator and optional last move record. -/
 structure GameState where
   board : Board
   turn : Player
+  lastMove : Option (Player × Coord)  -- Track who moved last and where
   deriving Repr
 
 /-- Game histories for strategies (most-recent state at head). -/
@@ -72,8 +73,8 @@ abbrev History := List GameState
 /-- Empty board with all cells set to `none`. -/
 def emptyBoard : Board := fun _ _ => none
 
-/-- Initial state with X to move. -/
-def initialState : GameState := { board := emptyBoard, turn := Player.X }
+/-- Initial state with X to move and no last move. -/
+def initialState : GameState := { board := emptyBoard, turn := Player.X, lastMove := none }
 
 /-- The empty cells on a board (legal moves). -/
 def emptyCells (b : Board) : Finset Coord :=
@@ -99,7 +100,8 @@ def playMove (s : GameState) (pos : Coord) : Option GameState :=
   if s.board pos.1 pos.2 = none then
     some
       { board := setCell s.board pos s.turn
-        turn := otherPlayer s.turn }
+        turn := otherPlayer s.turn
+        lastMove := some (s.turn, pos) }
   else
     none
 
@@ -128,7 +130,8 @@ lemma playMove_some_of_legal {s : GameState} {pos : Coord}
   classical
   rcases (legal_iff_empty).mp hlegal with hnone
   refine ⟨{ board := setCell s.board pos s.turn
-            turn := otherPlayer s.turn }, ?_⟩
+            turn := otherPlayer s.turn
+            lastMove := some (s.turn, pos) }, ?_⟩
   simp [playMove, hnone]
 
 lemma playMove_some_implies_legal {s s' : GameState} {pos : Coord}
@@ -180,7 +183,8 @@ lemma moveCount_playMove {s s' : GameState} {pos : Coord}
     exact this hnone
   have hstate :
       { board := setCell s.board pos s.turn
-        turn := otherPlayer s.turn } = s' := by
+        turn := otherPlayer s.turn
+        lastMove := some (s.turn, pos) } = s' := by
     simpa [playMove, hnone] using hplay
   cases hstate
   have hfilled := filledCells_setCell_insert (b := s.board) (pos := pos)

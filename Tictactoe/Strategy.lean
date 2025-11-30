@@ -42,6 +42,23 @@ def findBlockingMove (b : Board) (opponent : Player) : Option Coord :=
 def chooseAnyLegal (b : Board) : Option Coord :=
   (legalMovesList b).head?
 
+/-- Find a move that blocks multiple threats (if one exists).
+  Returns a move that eliminates at least two simultaneous opponent threats. -/
+def findBlockTwoThreatsMove (b : Board) (opponent : Player) : Option Coord :=
+  let rec go : List Coord → Option Coord
+    | [] => none
+    | pos :: rest =>
+      let b' := setCell b pos Player.X
+      let threats_before := threatCount b opponent
+      let threats_after := threatCount b' opponent
+      if threats_before ≥ 2 ∧ threats_after = 0 then
+        some pos  -- This move blocks all threats
+      else if threats_before ≥ 2 ∧ threats_after ≤ threats_before - 2 then
+        some pos  -- This move blocks at least 2 threats
+      else
+        go rest
+  go (legalMovesList b)
+
 /-- A strategy suggests a coordinate (if any) given history and current state. -/
 abbrev Strategy := History → GameState → Option Coord
 
@@ -55,6 +72,28 @@ def xCenterBlockStrategy : Strategy :=
     if s.turn = Player.X then
       if centerCoord ∈ legalMoves s.board then
         some centerCoord
+      else
+        match findBlockingMove s.board Player.O with
+        | some pos => some pos
+        | none => chooseAnyLegal s.board
+    else
+      none
+
+/-- Enhanced X strategy: center, block single threats, block two threats if fork present, otherwise play legal move. -/
+def xCenterBlockForkStrategy : Strategy :=
+  fun _hist s =>
+    if s.turn = Player.X then
+      if centerCoord ∈ legalMoves s.board then
+        some centerCoord
+      else if hasFork s.board Player.O then
+        -- If O has a fork, prioritize blocking 2+ threats
+        match findBlockTwoThreatsMove s.board Player.O with
+        | some pos => some pos
+        | none =>
+          -- Fall back to blocking single threats
+          match findBlockingMove s.board Player.O with
+          | some pos => some pos
+          | none => chooseAnyLegal s.board
       else
         match findBlockingMove s.board Player.O with
         | some pos => some pos
@@ -89,6 +128,36 @@ lemma blockingMove_prevents_win {b : Board} {pos : Coord} {line : Finset Coord}
       exact hfilled pos (Finset.mem_filter.mp h_pos).1
     simp [setCell] at contra
   · sorry
+
+/-- Fork: opponent has two or more separate lines with immediate threats. -/
+def hasFork (b : Board) (opponent : Player) : Prop :=
+  ∃ line1 line2 ∈ winningLines, line1 ≠ line2 ∧
+    isImmediateThreat b opponent line1 ∧
+    isImmediateThreat b opponent line2
+
+/-- Count how many immediate threats opponent has on the board. -/
+def threatCount (b : Board) (opponent : Player) : Nat :=
+  (winningLines.filter (fun line => isImmediateThreat b opponent line)).card
+
+/-- Fork is present when opponent has 2+ threats. -/
+lemma fork_iff_two_or_more_threats {b : Board} {opponent : Player} :
+    hasFork b opponent ↔ threatCount b opponent ≥ 2 := by
+  classical
+  unfold hasFork threatCount
+  constructor
+  · intro ⟨line1, hline1, line2, hline2, hne, h1, h2⟩
+    simp [Finset.mem_filter]
+    have h1_filtered : line1 ∈ winningLines.filter (fun line => isImmediateThreat b opponent line) := by
+      simp [Finset.mem_filter, hline1, h1]
+    have h2_filtered : line2 ∈ winningLines.filter (fun line => isImmediateThreat b opponent line) := by
+      simp [Finset.mem_filter, hline2, h2]
+    have h_distinct : (line1 : Finset Coord) ≠ (line2 : Finset Coord) := hne
+    have : (2 : ℕ) ≤ (winningLines.filter (fun line => isImmediateThreat b opponent line)).card := by
+      have h_card_ge_2 := Finset.card_le_of_two_mem h1_filtered h2_filtered h_distinct
+      exact h_card_ge_2
+    omega
+  · intro h_count
+    sorry
 
 /-- Center strategy correctness: playing center on empty board is a valid opening move. -/
 lemma centerCoord_on_empty_valid : centerCoord ∈ legalMoves emptyBoard := by
