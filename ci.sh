@@ -31,9 +31,6 @@ fi
 echo "Building Lean project (lake build)..."
 lake build
 
-echo "Building lint dependencies (Cli)..."
-lake build Cli
-
 echo "Running mathlib style lints (lint-style.lean)..."
 if ! lake env lean --run .lake/packages/mathlib/scripts/lint-style.lean; then
   echo "lint-style failed (known Lean IR interpreter crash); skipping style lint." >&2
@@ -70,12 +67,22 @@ if [[ "${DIFF_LINES}" -gt "${MAX_DIFF_LINES}" ]]; then
 fi
 
 PROMPT=$(cat <<'EOF'
-Write a concise git commit message for this Lean TicTacToe formalization.
-- Subject: present tense, <= 72 chars, no trailing period.
-- Body: only if essential; keep short bullets or sentences.
-- Note key Lean modules or scripts touched and testing if relevant.
-- Output format: first line is subject only. If body is needed, add a blank line then bullet lines. Do NOT wrap in markdown code blocks. No preamble.
-Diff to summarize:
+Generate a git commit message for this diff. Output ONLY the commit message, nothing else.
+
+CRITICAL: Your response must start immediately with the commit subject line. No thinking, no explanation, no preamble like "Here's the commit message:" - just the raw commit message text.
+
+Format:
+- Line 1: Subject in present tense, max 72 chars, no period
+- Line 2: Blank (only if body follows)
+- Lines 3+: Optional bullet points for details
+
+Example of correct output:
+Fix hasFork to use Bool instead of Prop for decidability
+
+- Change hasFork from Prop with existential to Bool using threatCount
+- Reorder definitions to avoid forward references
+
+Diff:
 EOF
 )
 

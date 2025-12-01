@@ -11,3 +11,7 @@ __pycache__/
 CLAUDE.md
 AGENTS.md
 GEMINI.md
+MCP_SETUP.md
+
+# MCP server scripts (local only)
+/scripts/

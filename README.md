@@ -75,6 +75,12 @@ Tictactoe/
     ├── StrategyComparison.lean  # Strategy comparison framework (80% formalized)
     ├── ExtendedStrategies.lean  # 6 strategy implementations (95% complete)
     └── OpeningBook.lean         # Opening theory (100% formalized)
+
+Demo/
+└── demo_standalone.lean         # Interactive perfect-play demo
+
+Test/
+└── Basic.lean                   # Test suite
 ```
 
 ### Key Concepts
@@ -452,7 +458,7 @@ Instead of enumerating all ~5,000 reachable board states:
 | StrategyComparison.lean | Strategy comparison | 200+ | 80% formalized |
 | ExtendedStrategies.lean | 6 strategies | 200+ | 95% complete |
 | OpeningBook.lean | Opening theory | 150+ | 100% formalized |
-| demo_standalone.lean | Interactive demo | 250+ | ✅ Working |
+| Demo/demo_standalone.lean | Interactive demo | 250+ | ✅ Working |
 | **Total** | **All modules** | **1,500+** | **Core: ✅ Complete** |
 
 ---
@@ -476,8 +482,7 @@ Instead of enumerating all ~5,000 reachable board states:
 This project demonstrates how formal methods can prove game-theoretic results without enumeration while providing educational insights through transparent reasoning.
 
 For questions about the formalization:
-- Review CLAUDE.md for development guidance
-- See FORMALIZATION.md for technical details (now consolidated in README)
+- See [RESEARCH.md](RESEARCH.md) for the full research paper
 - Run the demo to see the proof in action
 
 ---

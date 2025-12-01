@@ -8,7 +8,7 @@ package «tictactoe» where
 lean_lib «Tictactoe» where
 
 lean_exe «demo» {
-  root := `scripts.demo_standalone
+  root := `Demo.demo_standalone
 }
 
 @[test_driver]
